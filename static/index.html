@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 8px;
+            font-size: 16px;
+        }
+        button {
+            padding: 8px 16px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .todo-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .completed {
+            text-decoration: line-through;
+            color: #888;
+        }
+        .delete-btn {
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Todo List</h1>
+    <form id="todo-form">
+        <input type="text" id="todo-title" placeholder="Title..." required />
+        <input type="text" id="todo-desc" placeholder="Description (optional)..." />
+        <button type="submit">Add Todo</button>
+    </form>
+
+    <ul id="todo-list"></ul>
+
+    <script>
+        const form = document.getElementById('todo-form');
+        const titleInput = document.getElementById('todo-title');
+        const descInput = document.getElementById('todo-desc');
+        const todoList = document.getElementById('todo-list');
+
+        async function fetchTodos() {
+            const res = await fetch('/todos');
+            const todos = await res.json();
+            renderTodos(todos);
+        }
+
+        function renderTodos(todos) {
+            todoList.innerHTML = '';
+            todos.forEach(todo => {
+                const li = document.createElement('li');
+
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'todo-info';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = todo.completed;
+                checkbox.onchange = () => toggleTodo(todo.id);
+
+                const textSpan = document.createElement('span');
+                textSpan.textContent = todo.title + (todo.description ? ` - ${todo.description}` : '');
+                if (todo.completed) {
+                    textSpan.classList.add('completed');
+                }
+
+                infoDiv.appendChild(checkbox);
+                infoDiv.appendChild(textSpan);
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.onclick = () => deleteTodo(todo.id);
+
+                li.appendChild(infoDiv);
+                li.appendChild(deleteBtn);
+                todoList.appendChild(li);
+            });
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = titleInput.value.trim();
+            const description = descInput.value.trim();
+            if (!title) return;
+
+            await fetch('/todos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, description })
+            });
+
+            titleInput.value = '';
+            descInput.value = '';
+            fetchTodos();
+        });
+
+        async function toggleTodo(id) {
+            await fetch(`/todos/${id}/toggle`, { method: 'PATCH' });
+            fetchTodos();
+        }
+
+        async function deleteTodo(id) {
+            await fetch(`/todos/${id}`, { method: 'DELETE' });
+            fetchTodos();
+        }
+
+        fetchTodos();
+    </script>
+</body>
+</html>
